@@ -71,8 +71,8 @@ def main():
             print("TEST INPUT: {}".format(test))
             unpadded = unpad(test, blocksize)
             print("UNPADDING SUCCESSFUL: {}\n".format(unpadded))
-        except Exception:
-            print("UNPADDING FAILED\n")
+        except Exception as e:
+            print("UNPADDING FAILED: {}\n".format(str(e)))
 
 if __name__ == '__main__':
     main()
