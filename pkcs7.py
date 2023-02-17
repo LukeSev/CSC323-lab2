@@ -51,21 +51,16 @@ def main():
         foundation.append(i)
     blocksize = 4
 
-    # test = bytes(foundation)
-    # print("Unpadded: \n{}\n".format(test))
-    # newtest = pad(test, blocksize) # Should pad with two \x02 bytes
-    # print("Padded: \n{}\n".format(newtest))
-    # unp = unpad(newtest, blocksize)
-    # print("Unpadded: \n{}\n".format(unp))
-
     wrong_size = b'\x00\x01\x02\x03\x05'
     pad_amt_too_big = b'\x00\x01\x02\x03\x04\x05\x03\x03'
     no_padding = b'\x00\x01\x02\x03'
     zero_block = pad(b'\x00\x01\x02\x03', blocksize) # Expect: b'\x00\x01\x02\x03\x00\x00\x00\x00'
     just_right = pad(b'\x00\x01\x02\x03\x04\x02', blocksize) # Expect: b'\x00\x01\x02\x03\x04\x02\x02\x02'
 
+
+
     tests = [wrong_size, pad_amt_too_big, no_padding, zero_block, just_right]
-    print() # For formatting
+    print("BEGIN TEST\nBLOCKSIZE: {}\n".format(blocksize))
     for test in tests:
         try:
             print("TEST INPUT: {}".format(test))
