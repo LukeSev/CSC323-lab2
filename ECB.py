@@ -60,20 +60,58 @@ def ecb_decrypt(key, ciphertext):
 
     return bytes(ptext)
 
+def id_ECB(ciphertext):
+    # Takes in plaintext and looks for similar blocks
+    # Takes advantage of ECB vulnerability where 
+    # same plaintext block will result in same ciphertext block
+    # Input: Ciphertext as bytearray 
+    # (as opposed to bytes in other functions, since ctext will already be processed to remove header)
+    # Returns True if at least one set of matching blocks found, False otherwise
+    blocks = {}
+    matches = 0
+    for i in range(0, len(ciphertext), BLOCKSIZE):
+        if(i > len(ciphertext)-1):
+            block = ciphertext[i:]
+        else:
+            block = bytes(ciphertext[i:i+BLOCKSIZE])
         
+        if(blocks.get(block) is None):
+            # Ciphertext block hasn't been found yet, add to dict
+            blocks[block] = 1
+        else:
+            matches += 1
+    return (matches > 0)
+    
 
 def main():
-    file = open("Lab2.TaskII.A.txt", 'rb')
+    TaskII_A = open("Lab2.TaskII.A.txt", 'rb')
     key = 'CALIFORNIA LOVE!'.encode('ascii')
 
-    b64encoded = file.read().strip()
+    b64encoded = TaskII_A.read().strip()
     ciphertext = base64.b64decode(b64encoded)
     plaintext = ecb_decrypt(key, ciphertext)
 
-    # ctext = ecb_encrypt(key, plaintext)
-    # plaintext = ecb_decrypt(key, ctext)
+    print("DECRYPTED CIPHERTEXT: \n{}\n".format(plaintext.decode('ascii')))
 
-    print(plaintext.decode("ascii"))
+    ctext = ecb_encrypt(key, plaintext)
+    plaintext = ecb_decrypt(key, ctext)
+
+    print("RE-ENCRYPTED THEN DECRYPTED: \n{}\n".format(plaintext.decode('ascii')))
+
+    TaskII_B = open("Lab2.TaskII.B.txt", 'r')
+    lines = TaskII_B.readlines()
+
+    image = open("Lab2.TaskII.B.image.bmp", 'wb')
+    count = 0
+    matched = []
+    for line in lines:
+        processed = bytes.fromhex(line[54:].strip())
+        if(id_ECB(bytearray(processed)) > 0):
+            image.write(bytes.fromhex(line.strip()))
+            count += 1
+        
+    print("Number of ECB encryptions found: {}".format(count))
+
 
 if __name__ == '__main__':
     main()
