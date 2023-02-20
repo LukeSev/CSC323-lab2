@@ -44,7 +44,7 @@ def ecb_decrypt(key, ciphertext):
     
     for i in range(0, clength, BLOCKSIZE):
         # Select current block from ciphertext that will be decrypted
-        if(i > (clength-1)):
+        if((i+BLOCKSIZE) > (clength-1)):
             # Last block
             block = ctext[i:]
             decrypted = cipher.decrypt(bytes(block))
