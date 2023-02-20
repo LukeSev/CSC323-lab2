@@ -87,80 +87,62 @@ def id_ECB(ciphertext):
 def spoof_admin_cookie_ECB():
     # cookie is in format: user=USERNAME&uid=UID&role=ROLE
     # Using 'admin' as our username and a 1 digit UID (its an incrementing integer):
-    # unencryptedcookie = user=XXXXX&uid=X&role=...
+    # unencryptedcookie = user=XXXXX&uid=X &role=admin
 
-    # Since we know it's using ECB, we can figure out what the beginning of the admin's cookie will look like (excluding not-allowed characters '&' and '=')
-    payload_username = "adminXuidX0XroleXadmin"
-    # cookie format: user=admin  XuidX0Xrol  eXadmin &uid=...
-    # indexing:      0123456789  0123456789  0123456 789...
-    # decimal       0           1           2
-    payload_params = {'user':payload_username, 'password':"doesntmatter"}
+    # End goal: construct cookie that, when decrypted, yields:
+    #     user=AAAAAAAAAAA AAAA&uid=X&role= admin
+    #     [    block 1   ] [    block 2   ] [    block 3   ]
+    # To do this, we need to figure out what the first two blocks of the cookie give us, which is as easy as using 15 A's for out username
+    username = "A" * 15
+    pre_admin = cookiejar.get_auth_token({'user':username, 'password':'lmao'})[:64] # Only want first two blocks/first 32 bytes, so first 64 hex chars
 
-    cookie = cookiejar.get_auth_token(payload_params)
+    # To get our admin block, we need to account for padding, which in this case uses the ANSIX923 padding scheme
+    # Since we're padding 11 bytes, need 10 \x00 bytes then a final \x0B byte to tell number of bytes to strip
+    username = "A" * 11 + "admin" + 10 * b'\x00'.decode("ascii") + b'\x0B'.decode("ascii") # Fill first block, then insert admin+padding block
 
-    # Using the formatting above, we can figure out different parts of what a valid admin cookie can look like:
-    user_admin_enc = cookie[:10]
-    uid_field_admin_enc = cookie[11:14]
-    uid_val_admin_enc = cookie[15]
-    role_field_admin_enc = cookie[17:21]
-    role_val_admin_enc = cookie[22:27]
+    admin = cookiejar.get_auth_token({'user':username, 'password':'lmao'})[32:64] # Just take our encrypted, padded block
+
+    # So now our valid cookie will be all 3 encrypted blocks
+    return pre_admin + admin
     
-    # Now we have every part of the admin's cookie except the special characters, which we can get by generating a cookie for a generic 5-char user
-    special_char_params = {'user':'12345', 'password':'lmao'}
-    # Cookie format: user=12345 &uid=1&rol e=user [rest of cookie]
-    # indexing:      0123456789 0123456789 012345 6...
-    # decimal:      0          1          2           
-
-    spec_cookie = cookiejar.get_auth_token(special_char_params)
-    uid_amp_enc = spec_cookie[10]
-    uid_eq_enc = spec_cookie[14]
-    role_amp_enc = spec_cookie[16]
-    role_eq_enc = spec_cookie[21]
-
-    # For the rest of the cookie, we need a new token generated with a 6 character username
-    # This is because the second block is padded with ansix923, which depends on the number of characters it needs to pad
-    # To emulate what the padding would look like for the admin, we simply input any 6 char username (to accound for the 1 missing char between role=admin and role=user)
-    final_params = {'user':'123456', 'password':'sendhelp'}
-    rest_of_cookie = cookiejar.get_auth_token(final_params)[27:]
-
-    # Now we reconstruct our spoofed cookie
-    spoofed_cookie = user_admin_enc + uid_amp_enc + uid_field_admin_enc + uid_eq_enc + uid_val_admin_enc + role_amp_enc + role_field_admin_enc + role_eq_enc + role_val_admin_enc + rest_of_cookie
-    return spoofed_cookie
 
 def main():
 
-    login_info = spoof_admin_cookie_ECB()
-    print("Admin Cookie: {}".format(login_info))
-    cookiejar.admin_login(login_info)
+    print("\n########## BEGIN BASIC ECB TESTING ##########")
+    TaskII_A = open("Lab2.TaskII.A.txt", 'rb')
+    key = 'CALIFORNIA LOVE!'.encode('ascii')
 
+    b64encoded = TaskII_A.read().strip()
+    ciphertext = base64.b64decode(b64encoded)
+    plaintext = ecb_decrypt(key, ciphertext)
 
-    # TaskII_A = open("Lab2.TaskII.A.txt", 'rb')
-    # key = 'CALIFORNIA LOVE!'.encode('ascii')
+    print("DECRYPTED CIPHERTEXT: \n{}\n".format(plaintext.decode('ascii')))
 
-    # b64encoded = TaskII_A.read().strip()
-    # ciphertext = base64.b64decode(b64encoded)
-    # plaintext = ecb_decrypt(key, ciphertext)
+    ctext = ecb_encrypt(key, plaintext)
+    plaintext = ecb_decrypt(key, ctext)
 
-    # print("DECRYPTED CIPHERTEXT: \n{}\n".format(plaintext.decode('ascii')))
+    print("RE-ENCRYPTED THEN DECRYPTED: \n{}\n".format(plaintext.decode('ascii')))
 
-    # ctext = ecb_encrypt(key, plaintext)
-    # plaintext = ecb_decrypt(key, ctext)
+    TaskII_B = open("Lab2.TaskII.B.txt", 'r')
+    lines = TaskII_B.readlines()
 
-    # print("RE-ENCRYPTED THEN DECRYPTED: \n{}\n".format(plaintext.decode('ascii')))
-
-    # TaskII_B = open("Lab2.TaskII.B.txt", 'r')
-    # lines = TaskII_B.readlines()
-
-    # image = open("Lab2.TaskII.B.image.bmp", 'wb')
-    # count = 0
-    # matched = []
-    # for line in lines:
-    #     processed = bytes.fromhex(line[54:].strip())
-    #     if(id_ECB(bytearray(processed)) > 0):
-    #         image.write(bytes.fromhex(line.strip()))
-    #         count += 1
+    image = open("Lab2.TaskII.B.image.bmp", 'wb')
+    count = 0
+    matched = []
+    for line in lines:
+        processed = bytes.fromhex(line[54:].strip())
+        if(id_ECB(bytearray(processed)) > 0):
+            image.write(bytes.fromhex(line.strip()))
+            count += 1
         
-    # print("Number of ECB encryptions found: {}".format(count))
+    print("Number of ECB encryptions found: {}".format(count))
+    print("\n##########  END BASIC ECB TESTING  ##########\n")
+
+    print("\n######## BEGIN ECB ADMIN COOKIE GAME ########")
+    login_info = spoof_admin_cookie_ECB()
+    print("\nSpoofed cookie: {}\n".format(login_info))
+    cookiejar.admin_login(login_info)
+    print("\n########  END ECB ADMIN COOKIE GAME  ########\n")
 
 
 if __name__ == '__main__':

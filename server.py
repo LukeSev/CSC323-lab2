@@ -108,8 +108,6 @@ class home:
 	def GET(self):
 		user, uid, role = verify_cookie()
 
-		print("USER: {} || UID: {} || ROLE: {}\n".format(user, uid, role))
-
 		if user == "":
 			return render.home("", "", "", "Please log in.")
 		elif role == "admin":
@@ -128,7 +126,6 @@ def create_cookie(user, uid, role):
 
 def verify_cookie():
     cookie = web.cookies().get(STR_COOKIE_NAME)
-    print("\nCookie: {}".format(cookie))
     if cookie == None:
         return "","",""
     try:
