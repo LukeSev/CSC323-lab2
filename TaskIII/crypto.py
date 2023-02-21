@@ -46,7 +46,6 @@ def verify_crypto_cookie(enc_cookie, key):
     aes_obj = AES.new(bytes(key), AES.MODE_CBC, iv)
     cookie_pad = aes_obj.decrypt(enc_cookie[AES.block_size:])
     cookie = ansix923_strip(cookie_pad, AES.block_size)
-    print(cookie.decode("latin-1"))
     query = urllib.parse.parse_qs(cookie.decode("latin-1"))
     
     #This will cause an exception (to be caught by caller) if one of the keys is missing.

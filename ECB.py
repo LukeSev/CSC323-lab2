@@ -107,43 +107,59 @@ def spoof_admin_cookie_ECB():
     
 
 def main():
+    # If you only want to test one part of TaskII, set the part(s) you don't want tested to false below
+    # part1 corresponds to the basic ECB decryption, part2 the ECB identification, and part3 the admin cookie-spoofing
+    part1 = True
+    part2 = True
+    part3 = True
 
-    print("\n########## BEGIN BASIC ECB TESTING ##########")
-    TaskII_A = open("Lab2.TaskII.A.txt", 'r')
-    key = 'CALIFORNIA LOVE!'.encode('ascii')
+    if(part1):
+        print("\n########## BEGIN BASIC ECB TESTING #########\n")
+        TaskII_A = open("Lab2.TaskII.A.txt", 'r')
+        key = 'CALIFORNIA LOVE!'.encode('ascii')
 
-    b64encoded = TaskII_A.read().replace('\n', '')
-    ciphertext = base64.b64decode(b64encoded)
+        b64encoded = TaskII_A.read().replace('\n', '')
+        ciphertext = base64.b64decode(b64encoded)
 
-    plaintext = ecb_decrypt(key, ciphertext)
+        plaintext = ecb_decrypt(key, ciphertext)
 
-    print("DECRYPTED CIPHERTEXT: \n{}\n".format(plaintext.decode('ascii')))
+        print("DECRYPTED CIPHERTEXT: \n{}\n".format(plaintext.decode('ascii')))
 
-    ctext = ecb_encrypt(key, plaintext)
-    plaintext = ecb_decrypt(key, ctext)
+        cipher = AES.new(key, AES.MODE_ECB)
+        plaintext = cipher.decrypt(ciphertext)
+        print("DECRYPTED WITH BUILT-IN AES ECB: \n{}".format(plaintext.decode('ascii')))
 
-    print("RE-ENCRYPTED THEN DECRYPTED: \n{}\n".format(plaintext.decode('ascii')))
+        ctext = ecb_encrypt(key, plaintext)
+        plaintext2 = ecb_decrypt(key, ctext)
+        print("RE-ENCRYPTED THEN DECRYPTED: \n{}\n".format(plaintext.decode('ascii')))
 
-    TaskII_B = open("Lab2.TaskII.B.txt", 'r')
-    lines = TaskII_B.readlines()
+        print("\n#########   END BASIC ECB TESTING  #########\n")
 
-    image = open("Lab2.TaskII.B.image.bmp", 'wb')
-    count = 0
-    matched = []
-    for line in lines:
-        processed = bytes.fromhex(line[54:].strip())
-        if(id_ECB(bytearray(processed)) > 0):
-            image.write(bytes.fromhex(line.strip()))
-            count += 1
-        
-    print("Number of ECB encryptions found: {}".format(count))
-    print("\n##########  END BASIC ECB TESTING  ##########\n")
+    if(part2):
+        print("\n########  BEGIN ECB IDENTIFICATION  ########\n")
+        TaskII_B = open("Lab2.TaskII.B.txt", 'r')
+        lines = TaskII_B.readlines()
 
-    print("\n######## BEGIN ECB ADMIN COOKIE GAME ########")
-    login_info = spoof_admin_cookie_ECB()
-    print("\nSpoofed cookie: {}\n".format(login_info))
-    cookiejar.admin_login(login_info)
-    print("\n########  END ECB ADMIN COOKIE GAME  ########\n")
+        out_image = "Lab2.TaskII.B.image.bmp"
+        image = open(out_image, 'wb')
+        count = 0
+        matched = []
+        for line in lines:
+            processed = bytes.fromhex(line[54:].strip())
+            if(id_ECB(bytearray(processed)) > 0):
+                image.write(bytes.fromhex(line.strip()))
+                count += 1
+            
+        print("Number of ECB encryptions found: {}".format(count))
+        print("Written to {}".format(out_image))
+        print("\n########   END ECB IDENTIFICATION   ########\n")
+
+    if(part3):
+        print("\n######## BEGIN ECB ADMIN COOKIE GAME #######\n")
+        login_info = spoof_admin_cookie_ECB()
+        print("\nSpoofed cookie: {}\n".format(login_info))
+        cookiejar.admin_login(login_info)
+        print("\n########  END ECB ADMIN COOKIE GAME  #######\n")
 
 
 if __name__ == '__main__':

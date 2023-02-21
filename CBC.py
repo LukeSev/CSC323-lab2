@@ -131,7 +131,9 @@ def insert_payload(ciphertext, payload, start):
     return ciphertext
 
 def main():
-    part1 = False
+    # If you only want to test one part of TaskIII, set the part(s) you don't want tested to false below
+    # part1 corresponds to the basic CBC decryption, part2 the admin cookie-spoofing
+    part1 = True
     part2 = True
 
     if(part1):
