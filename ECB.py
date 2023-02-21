@@ -109,11 +109,12 @@ def spoof_admin_cookie_ECB():
 def main():
 
     print("\n########## BEGIN BASIC ECB TESTING ##########")
-    TaskII_A = open("Lab2.TaskII.A.txt", 'rb')
+    TaskII_A = open("Lab2.TaskII.A.txt", 'r')
     key = 'CALIFORNIA LOVE!'.encode('ascii')
 
-    b64encoded = TaskII_A.read().strip()
+    b64encoded = TaskII_A.read().replace('\n', '')
     ciphertext = base64.b64decode(b64encoded)
+
     plaintext = ecb_decrypt(key, ciphertext)
 
     print("DECRYPTED CIPHERTEXT: \n{}\n".format(plaintext.decode('ascii')))

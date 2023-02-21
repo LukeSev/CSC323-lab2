@@ -51,6 +51,9 @@ def cbc_decrypt(ciphertext, key, IV):
     # Returns plaintext as bytes
     # Assumes IV has already been removed from first block of original ciphertext
 
+    if(len(ciphertext) % BLOCKSIZE != 0):
+        raise Exception("Ciphertext is not a multiple of the block size")
+
     cipher = AES.new(key, AES.MODE_ECB)
 
     ctext = bytearray(ciphertext)
@@ -84,9 +87,9 @@ def cbc_decrypt(ciphertext, key, IV):
 
 def spoof_admin_cookie_CBC():
     # Our attack will go as follows:
-    # Starting plaintext:  user=AAAAAAAAAAA AAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAA &uid=1&role=user [padding block]
-    # Goal plaintext:      user=AAAAAAAAAAA [   gibberish  ] &uid=0&AAAAAAA=A [   gibberish  ] AAAAA&role=admin [padding block]
-    # Block #:             [    block1    ] [    block2    ] [    block3    ] [    block4    ] [    block4    ] [padding block]
+    # Starting plaintext:  user=AAAAAAAAAAA AAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAA &uid=1&role=user [padding block]
+    # Goal plaintext:      user=AAAAAAAAAAA [   gibberish  ] &uid=0&AAAAAAA=A [   gibberish  ] &role=admin&A=AA [   gibberish  ] [padding block]
+    # Block #:             [    block1    ] [    block2    ] [    block3    ] [    block4    ] [    block4    ] [    block4    ] [padding block]
 
     # To accomplish this, we will need to XOR the ciphertext block in block2 starting at index 5 (where the '1' is in block3 of plaintext)
     # To get the plaintext to become what we want, we need to XOR each byte in ciphertext with (starting plaintext byte ^ goal plaintext byte) for the byte at the corresponding index
@@ -96,7 +99,7 @@ def spoof_admin_cookie_CBC():
     # The query parser uses '&' as a separator, so we just have to make sure we set them around the info we want
 
     # Now we need to actually generate the ciphertext:
-    cookie = bytearray.fromhex(cookiejar.get_auth_token({'user':"A" * (11+(16*3)), 'password':'lol'}))
+    cookie = bytearray.fromhex(cookiejar.get_auth_token({'user':"A" * (11+(16*4)), 'password':'lol'}))
     
     # First round of payload insertion takes care of uid
     chars_to_change = "AAAAAAAAAAAAAAAA"
@@ -105,8 +108,8 @@ def spoof_admin_cookie_CBC():
     cookie = insert_payload(cookie, payload, 32)
 
     # Second round of payload insertion takes care of role
-    chars_to_change = "&uid=2&role=user"
-    goal_chars = "AAAAA&role=admin"
+    chars_to_change = "AAAAAAAAAAAAAAAA"
+    goal_chars = "&role=admin&A=AA"
     payload = fill_payload(chars_to_change, goal_chars)
     cookie = insert_payload(cookie, payload, 64)
 
