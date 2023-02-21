@@ -82,16 +82,76 @@ def cbc_decrypt(ciphertext, key, IV):
         prev = cblock
     return bytes(ptext)
 
+def spoof_admin_cookie_CBC():
+    # Our attack will go as follows:
+    # Starting plaintext:  user=AAAAAAAAAAA AAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAA &uid=1&role=user [padding block]
+    # Goal plaintext:      user=AAAAAAAAAAA [   gibberish  ] &uid=0&AAAAAAA=A [   gibberish  ] AAAAA&role=admin [padding block]
+    # Block #:             [    block1    ] [    block2    ] [    block3    ] [    block4    ] [    block4    ] [padding block]
+
+    # To accomplish this, we will need to XOR the ciphertext block in block2 starting at index 5 (where the '1' is in block3 of plaintext)
+    # To get the plaintext to become what we want, we need to XOR each byte in ciphertext with (starting plaintext byte ^ goal plaintext byte) for the byte at the corresponding index
+
+    # We can do this because the server doesn't check for the validity or count of the fields that are submitted but just the three that it looks for
+    # As such, we can do byte flipping on however many blocks we want as long as it results in the query parser finding a user, uid, and role field
+    # The query parser uses '&' as a separator, so we just have to make sure we set them around the info we want
+
+    # Now we need to actually generate the ciphertext:
+    cookie = bytearray.fromhex(cookiejar.get_auth_token({'user':"A" * (11+(16*3)), 'password':'lol'}))
+    
+    # First round of payload insertion takes care of uid
+    chars_to_change = "AAAAAAAAAAAAAAAA"
+    goal_chars = "&uid=0&AAAAAAA=A"
+    payload = fill_payload(chars_to_change, goal_chars)
+    cookie = insert_payload(cookie, payload, 32)
+
+    # Second round of payload insertion takes care of role
+    chars_to_change = "&uid=2&role=user"
+    goal_chars = "AAAAA&role=admin"
+    payload = fill_payload(chars_to_change, goal_chars)
+    cookie = insert_payload(cookie, payload, 64)
+
+    return bytes(cookie).hex()
+
+def fill_payload(str1, str2):
+    # Given strings of equal length, create bytearray that represents...
+    # a block comprised of each element in str1 XORed with each corresponds to element in str2
+    # Note: Since ascii string, XOR their ascii values
+    payload = bytearray(BLOCKSIZE-len(str1))
+    for i in range(len(str1)):
+        payload.append(ord(str1[i]) ^ ord(str2[i]))
+    return payload
+
+def insert_payload(ciphertext, payload, start):
+    # Takes in ciphertext and payload as bytearray
+    for i in range(start, start+BLOCKSIZE, 1):
+        ciphertext[i] = ciphertext[i] ^ payload[i-start]
+    return ciphertext
+
 def main():
-    file = open("Lab2.TaskIII.A.txt", 'r')
-    b64encoded = file.read().replace('\n', '')
-    ciphertext = base64.b64decode(b64encoded)[16:] # Remove first block
+    part1 = False
+    part2 = True
 
-    key = 'MIND ON MY MONEY'.encode("ascii")
-    IV = 'MONEY ON MY MIND'.encode("ascii")
+    if(part1):
+        print("\n#####   BEGIN CBC DECRYPTION   #####\n")
+        file = open("Lab2.TaskIII.A.txt", 'r')
+        b64encoded = file.read().replace('\n', '')
+        ciphertext = base64.b64decode(b64encoded)[16:] # Remove first block
 
-    plaintext = cbc_decrypt(ciphertext, key, IV)
-    print(plaintext.decode())
+        key = 'MIND ON MY MONEY'.encode("ascii")
+        IV = 'MONEY ON MY MIND'.encode("ascii")
+
+        plaintext = cbc_decrypt(ciphertext, key, IV)
+        print(plaintext.decode())
+        print("\n#####    END CBC DECRYPTION    #####\n")
+
+    if(part2):
+        print("\n##### BEGIN CBC ADMIN SPOOFING #####\n")
+        
+        spoofed_cookie = spoof_admin_cookie_CBC()
+        print("Admin Cookie: {}".format(spoofed_cookie))
+        cookiejar.admin_login(spoofed_cookie)
+
+        print("\n#####  END CBC ADMIN SPOOFING  #####\n")
 
 if __name__ == "__main__":
     main()

@@ -44,7 +44,6 @@ def main():
     test_params = {'user':'user', 'password':'user'}
     print(get_auth_token(adv_params))
     print(get_auth_token(test_params))
-    #print("\nUSER: {} || PASSWORD: {}\n{}\n".format(adv_params['user'], adv_params['password'], get_auth_token(adv_params)))
 
 if __name__ == '__main__':
     main()
